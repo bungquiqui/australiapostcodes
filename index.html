@@ -50,17 +50,24 @@
     }
     .div10 {
       grid-area:2/9/6/13;
-      background:white; overflow:hidden;
+      background:white;
+      /* allow overflow so crosshair isn't clipped */
+      overflow: visible;
     }
-    #guessMapFull { width:100%; height:100%; }
-    /* red crosshair overlay */
+    /* make the map container a positioned stacking context */
+    #guessMapFull {
+      width:100%; height:100%;
+      position: relative;
+      z-index: 0;
+    }
+    /* red crosshair positioned over the map */
     .crosshair {
-      position:absolute;
-      top:50%; left:50%;
-      width:24px; height:24px;
-      margin:-12px 0 0 -12px;
-      pointer-events:none;
-      z-index:500;
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 24px; height: 24px;
+      margin: -12px 0 0 -12px;
+      pointer-events: none;
+      z-index: 1000;
     }
     .crosshair::before, .crosshair::after {
       content:''; position:absolute; background:#dc1928;
@@ -112,7 +119,7 @@
       <div id="popup" class="popup"></div>
     </div>
 
-    <!-- Guess map panel with crosshair -->
+    <!-- Guess map panel with embedded crosshair -->
     <div class="div10">
       <div id="guessMapFull"></div>
       <div class="crosshair"></div>
@@ -134,7 +141,7 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
-    // 1) Locations with fixed heading & pitch
+    // Locations with fixed heading & pitch
     const locations = [
       { lat: -29.1140928, lon: 147.4544738, postcode: '2838', heading: 207.87, pitch: 0 },
       { lat: -29.4274189, lon: 147.9804288, postcode: '2834', heading: 153.02, pitch: 0 },
@@ -148,9 +155,8 @@
     let current = locations[currentIndex];
     let panorama;
 
-    // 2) Called by Maps API when ready
+    // Called by Maps API when ready
     function initMap() {
-      // Prefetch panoramas
       const svc = new google.maps.StreetViewService();
       locations.forEach(loc => {
         svc.getPanorama({ location: { lat: loc.lat, lng: loc.lon }, radius: 50 }, () => {});
@@ -158,7 +164,7 @@
       showStreetView();
     }
 
-    // 3) Render Street View with locked heading/pitch
+    // Render Street View with locked heading/pitch
     function showStreetView() {
       const spot = locations[currentIndex];
       panorama = new google.maps.StreetViewPanorama(
@@ -174,7 +180,7 @@
       );
     }
 
-    // 4) Leaflet guess map setup
+    // Leaflet guess map setup
     const defaultCenter = [-25.2744, 133.7751];
     const defaultZoom   = 4;
     const guessMap      = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
@@ -199,7 +205,7 @@
       return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2));
     }
 
-    // 5) Handle postcode submission
+    // Handle postcode submission
     function submitGuess() {
       const inputs = document.querySelectorAll('.div4 input, .div5 input, .div6 input, .div7 input');
       const guess  = Array.from(inputs).map(i => i.value).join('');
@@ -223,7 +229,7 @@
       }, 2000);
     }
 
-    // 6) Optional: autofill postcode on hover
+    // Optional: autofill postcode on hover
     let throttle;
     guessMap.on('mousemove', e => {
       clearTimeout(throttle);
