@@ -38,9 +38,7 @@
       grid-area: 2 / 1 / 9 / 9;
       background: white; overflow:hidden;
     }
-    #streetView {
-      width:100%; height:100%;
-    }
+    #streetView { width:100%; height:100%; }
     .popup {
       position:absolute; top:50%; left:50%;
       transform: translate(-50%,-50%);
@@ -123,9 +121,8 @@
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- Google Maps JS API (enable Street View) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs"></script>
 
+  <!-- Main game logic -->
   <script>
     // ---- Data & state ----
     const locations = [
@@ -139,33 +136,9 @@
 
     let currentIndex = 0;
     let current = locations[currentIndex];
-
-    // ---- Leaflet guess map ----
-    const defaultCenter = [-25.2744, 133.7751];
-    const defaultZoom = 4;
-    const guessMap = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
-
-    let guessMarker, correctMarker, line;
-
-    function showVisualResult(uLat, uLon, cLat, cLon) {
-      if (guessMarker) guessMap.removeLayer(guessMarker);
-      if (correctMarker) guessMap.removeLayer(correctMarker);
-      if (line) guessMap.removeLayer(line);
-      guessMarker = L.marker([uLat, uLon]).addTo(guessMap);
-      correctMarker = L.marker([cLat, cLon]).addTo(guessMap);
-      line = L.polyline([[uLat,uLon],[cLat,cLon]], {color:'#dc1928'}).addTo(guessMap);
-      guessMap.fitBounds([[uLat,uLon],[cLat,cLon]]);
-    }
-
-    function getDistance(a,b,c,d){
-      const R=6371, dLat=(c-a)*Math.PI/180, dLon=(d-b)*Math.PI/180;
-      const a2 = Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
-    }
-
-    // ---- Google Street View ----
     let panorama;
+
+    // ---- Google Street View init ----
     function initStreetView() {
       panorama = new google.maps.StreetViewPanorama(
         document.getElementById('streetView'),
@@ -177,8 +150,32 @@
       );
     }
 
-    // init Street View once Maps API is ready
-    window.addEventListener('load', initStreetView);
+    // ---- Leaflet guess map ----
+    const defaultCenter = [-25.2744, 133.7751];
+    const defaultZoom = 4;
+    const guessMap = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
+
+    let guessMarker, correctMarker, line;
+    function showVisualResult(uLat, uLon, cLat, cLon) {
+      if (guessMarker) guessMap.removeLayer(guessMarker);
+      if (correctMarker) guessMap.removeLayer(correctMarker);
+      if (line) guessMap.removeLayer(line);
+      guessMarker = L.marker([uLat, uLon]).addTo(guessMap);
+      correctMarker = L.marker([cLat, cLon]).addTo(guessMap);
+      line = L.polyline([[uLat,uLon],[cLat,cLon]], {color:'#dc1928'}).addTo(guessMap);
+      guessMap.fitBounds([[uLat,uLon],[cLat,cLon]]);
+    }
+
+    function getDistance(a,b,c,d){
+      const R=6371,
+        dLat=(c-a)*Math.PI/180,
+        dLon=(d-b)*Math.PI/180;
+      const a2 = Math.sin(dLat/2)**2 +
+        Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180) *
+        Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
+    }
 
     // ---- Guess submission ----
     function submitGuess() {
@@ -196,7 +193,6 @@
 
       showVisualResult(center.lat, center.lng, current.lat, current.lon);
 
-      // after 2 s, hide and cycle
       setTimeout(() => {
         pop.style.display = 'none';
         if (guessMarker) guessMap.removeLayer(guessMarker);
@@ -211,7 +207,7 @@
       }, 2000);
     }
 
-    // ---- Auto-fill postcode on mousemove (optional) ----
+    // ---- Auto-fill postcode on mousemove ----
     let throttle;
     guessMap.on('mousemove', e => {
       clearTimeout(throttle);
@@ -228,6 +224,13 @@
           });
       }, 50);
     });
+  </script>
+
+  <!-- Google Maps JS API (async/defer with callback) -->
+  <script
+    async
+    defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs&callback=initStreetView&loading=async">
   </script>
 </body>
 </html>
