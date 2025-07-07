@@ -188,17 +188,21 @@
     const guessMap=L.map('guessMapFull').setView(defaultCenter,defaultZoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
     let guessMarker,correctMarker,line;
+    const GOOGLE_API_KEY = '';
+    function streetViewUrl(lat, lon) {
+      return `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lon}&key=${GOOGLE_API_KEY}`;
+    }
     let locations=[
-      {image:'images/8 Brenda St Goodooga NSW 2838.png',lat:-29.3607,lon:148.1150,postcode:'2838'},
-      {image:'images/46 Morilla St Lightning Ridge NSW 2834.png',lat:-29.4288,lon:147.9783,postcode:'2834'},
-      {image:'images/117 Heeney St Chinchilla QLD 4413.png',lat:-26.7394,lon:150.6230,postcode:'4413'},
-      {image:'images/107 Scott St Warracknabeal VIC 3393.png',lat:-36.2527,lon:142.4036,postcode:'3393'},
-      {image:'images/56 Bayley St Coolgardie WA 6429.png',lat:-30.9478,lon:122.3549,postcode:'6429'},
-      {image:'images/56 Graves St Kadina SA 5554.png',lat:-33.9964,lon:137.6504,postcode:'5554'}
+      {lat:-29.3607,lon:148.1150,postcode:'2838'},
+      {lat:-29.4288,lon:147.9783,postcode:'2834'},
+      {lat:-26.7394,lon:150.6230,postcode:'4413'},
+      {lat:-36.2527,lon:142.4036,postcode:'3393'},
+      {lat:-30.9478,lon:122.3549,postcode:'6429'},
+      {lat:-33.9964,lon:137.6504,postcode:'5554'}
     ];
     locations.sort(()=>Math.random()-0.5);
     let currentIndex=0,current=locations[0];
-    document.getElementById('postImage').src=current.image;
+    document.getElementById('postImage').src=streetViewUrl(current.lat,current.lon);
     function showVisualResult(uLat,uLon,cLat,cLon){
       if(guessMarker)guessMap.removeLayer(guessMarker);
       if(correctMarker)guessMap.removeLayer(correctMarker);
@@ -227,7 +231,7 @@
         guessMap.setView(defaultCenter,defaultZoom);
         currentIndex=(currentIndex+1)%locations.length;
         current=locations[currentIndex];
-        document.getElementById('postImage').src=current.image;
+        document.getElementById('postImage').src=streetViewUrl(current.lat,current.lon);
         inputs.forEach(i=>i.value='');
       },2000);
     }
