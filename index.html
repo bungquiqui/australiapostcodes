@@ -53,10 +53,14 @@
       background:white; overflow:hidden;
     }
     #guessMapFull { width:100%; height:100%; }
+    /* red crosshair overlay */
     .crosshair {
-      position:absolute; top:50%; left:50%;
-      width:24px; height:24px; margin:-12px;
+      position:absolute;
+      top:50%; left:50%;
+      width:24px; height:24px;
+      margin:-12px 0 0 -12px;
       pointer-events:none;
+      z-index:500;
     }
     .crosshair::before, .crosshair::after {
       content:''; position:absolute; background:#dc1928;
@@ -99,16 +103,16 @@
 </head>
 <body>
   <div class="parent">
-    <div class="div1">
-      <img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo">
-    </div>
+    <div class="div1"><img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo"></div>
     <div class="div2">Australia Postcodes</div>
 
+    <!-- Street View panel -->
     <div class="div3">
       <div id="streetView"></div>
       <div id="popup" class="popup"></div>
     </div>
 
+    <!-- Guess map panel with crosshair -->
     <div class="div10">
       <div id="guessMapFull"></div>
       <div class="crosshair"></div>
@@ -146,12 +150,11 @@
 
     // 2) Called by Maps API when ready
     function initMap() {
-      // prefetch all panoramas
+      // Prefetch panoramas
       const svc = new google.maps.StreetViewService();
       locations.forEach(loc => {
         svc.getPanorama({ location: { lat: loc.lat, lng: loc.lon }, radius: 50 }, () => {});
       });
-      // show the first one
       showStreetView();
     }
 
@@ -205,7 +208,7 @@
       const dist   = Math.round(getDistance(center.lat, center.lng, current.lat, current.lon));
       const ok     = (guess === current.postcode);
 
-      pop.innerText   = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
+      pop.innerText     = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
       pop.style.display = 'block';
       showVisualResult(center.lat, center.lng, current.lat, current.lon);
 
