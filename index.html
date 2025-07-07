@@ -23,7 +23,7 @@
       position: relative; border-radius:12px;
     }
     .div1 {
-      grid-area: 1/1/2/2;
+      grid-area:1/1/2/2;
       background:#dc1928;
       display:flex; align-items:center; justify-content:center;
       aspect-ratio:1;
@@ -92,14 +92,16 @@
     }
   </style>
 
-  <!-- Load Google Maps JS API early -->
+  <!-- Google Maps JS API (async/defer with callback) -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs&callback=initMap&loading=async">
   </script>
 </head>
 <body>
   <div class="parent">
-    <div class="div1"><img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo"></div>
+    <div class="div1">
+      <img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo">
+    </div>
     <div class="div2">Australia Postcodes</div>
 
     <div class="div3">
@@ -128,100 +130,110 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
-    // ---- Corrected locations ----
+    // 1) Locations with fixed heading & pitch
     const locations = [
-      { lat: -29.1140928, lon: 147.4544738, postcode: '2838' },  // 8 Brenda St, Goodooga NSW 2838
-      { lat: -29.4274189, lon: 147.9804288, postcode: '2834' },  // 46 Morilla St, Lightning Ridge NSW 2834
-      { lat: -30.9546979, lon: 121.1655660, postcode: '6429' },  // 56 Bayley St, Coolgardie WA 6429
-      { lat: -33.9635644, lon: 137.7150844, postcode: '5554' },  // 56 Graves St, Kadina SA 5554
-      { lat: -36.2510410, lon: 142.3949934, postcode: '3393' },  // 107 Scott St, Warracknabeal VIC 3393
-      { lat: -26.7392965, lon: 150.6251024, postcode: '4413' }   // 117 Heeney St, Chinchilla QLD 4413
+      { lat: -29.1140928, lon: 147.4544738, postcode: '2838', heading: 207.87, pitch: 0 },
+      { lat: -29.4274189, lon: 147.9804288, postcode: '2834', heading: 153.02, pitch: 0 },
+      { lat: -30.9546979, lon: 121.1655660, postcode: '6429', heading:  12.24, pitch: 0 },
+      { lat: -33.9635644, lon: 137.7150844, postcode: '5554', heading:  59.72, pitch: 0 },
+      { lat: -36.2510410, lon: 142.3949934, postcode: '3393', heading:  99.13, pitch: 0 },
+      { lat: -26.7392965, lon: 150.6251024, postcode: '4413', heading: 282.73, pitch: 0 }
     ].sort(() => Math.random() - 0.5);
 
     let currentIndex = 0;
     let current = locations[currentIndex];
     let panorama;
 
-    // ---- Called by Maps API when ready ----
+    // 2) Called by Maps API when ready
     function initMap() {
+      // prefetch all panoramas
       const svc = new google.maps.StreetViewService();
       locations.forEach(loc => {
-        svc.getPanorama({ location:{lat:loc.lat,lng:loc.lon}, radius:50 }, () => {});
+        svc.getPanorama({ location: { lat: loc.lat, lng: loc.lon }, radius: 50 }, () => {});
       });
-      initStreetView();
+      // show the first one
+      showStreetView();
     }
 
-    // ---- Show Street View ----
-    function initStreetView() {
+    // 3) Render Street View with locked heading/pitch
+    function showStreetView() {
+      const spot = locations[currentIndex];
       panorama = new google.maps.StreetViewPanorama(
         document.getElementById('streetView'),
-        { position:{lat:current.lat,lng:current.lon}, pov:{heading:0,pitch:0}, zoom:1 }
+        {
+          position: { lat: spot.lat, lng: spot.lon },
+          pov:      { heading: spot.heading, pitch: spot.pitch },
+          zoom:     1,
+          motionTracking:   false,
+          clickToGo:        false,
+          disableDefaultUI: true
+        }
       );
     }
 
-    // ---- Leaflet map ----
-    const defaultCenter = [-25.2744,133.7751];
-    const defaultZoom = 4;
-    const guessMap = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
+    // 4) Leaflet guess map setup
+    const defaultCenter = [-25.2744, 133.7751];
+    const defaultZoom   = 4;
+    const guessMap      = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
 
     let guessMarker, correctMarker, line;
-    function showVisualResult(uLat,uLon,cLat,cLon) {
-      if (guessMarker) guessMap.removeLayer(guessMarker);
-      if (correctMarker) guessMap.removeLayer(correctMarker);
-      if (line) guessMap.removeLayer(line);
-      guessMarker = L.marker([uLat,uLon]).addTo(guessMap);
-      correctMarker = L.marker([cLat,cLon]).addTo(guessMap);
-      line = L.polyline([[uLat,uLon],[cLat,cLon]],{color:'#dc1928'}).addTo(guessMap);
-      guessMap.fitBounds([[uLat,uLon],[cLat,cLon]]);
+    function showVisualResult(uLat, uLon, cLat, cLon) {
+      [guessMarker, correctMarker, line].forEach(m => m && guessMap.removeLayer(m));
+      guessMarker   = L.marker([uLat, uLon]).addTo(guessMap);
+      correctMarker = L.marker([cLat, cLon]).addTo(guessMap);
+      line          = L.polyline([[uLat, uLon], [cLat, cLon]], { color:'#dc1928' }).addTo(guessMap);
+      guessMap.fitBounds([[uLat, uLon], [cLat, cLon]]);
     }
 
     function getDistance(a,b,c,d) {
-      const R=6371, dLat=(c-a)*Math.PI/180, dLon=(d-b)*Math.PI/180;
-      const a2=Math.sin(dLat/2)**2
-               +Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)
-               *Math.sin(dLon/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
+      const R    = 6371;
+      const dLat = (c - a) * Math.PI/180;
+      const dLon = (d - b) * Math.PI/180;
+      const a2   = Math.sin(dLat/2)**2
+                 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)
+                 * Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2));
     }
 
-    // ---- Handle guesses ----
+    // 5) Handle postcode submission
     function submitGuess() {
-      const inputs = document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input');
-      const guess = Array.from(inputs).map(i=>i.value).join('');
-      const pop = document.getElementById('popup');
+      const inputs = document.querySelectorAll('.div4 input, .div5 input, .div6 input, .div7 input');
+      const guess  = Array.from(inputs).map(i => i.value).join('');
+      const pop    = document.getElementById('popup');
       const center = guessMap.getCenter();
-      const dist = Math.round(getDistance(center.lat,center.lng,current.lat,current.lon));
-      const ok = (guess === current.postcode);
+      const dist   = Math.round(getDistance(center.lat, center.lng, current.lat, current.lon));
+      const ok     = (guess === current.postcode);
 
-      pop.innerText = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
+      pop.innerText   = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
       pop.style.display = 'block';
       showVisualResult(center.lat, center.lng, current.lat, current.lon);
 
-      setTimeout(()=>{
-        pop.style.display='none';
-        [guessMarker,correctMarker,line].forEach(m=>m&&guessMap.removeLayer(m));
+      setTimeout(() => {
+        pop.style.display = 'none';
         guessMap.setView(defaultCenter, defaultZoom);
-        currentIndex=(currentIndex+1)%locations.length;
-        current=locations[currentIndex];
-        panorama.setPosition({lat:current.lat, lng:current.lon});
-        inputs.forEach(i=>i.value='');
+
+        currentIndex = (currentIndex + 1) % locations.length;
+        current      = locations[currentIndex];
+        showStreetView();
+        inputs.forEach(i => i.value = '');
       }, 2000);
     }
 
-    // ---- Optional: autofill on hover ----
+    // 6) Optional: autofill postcode on hover
     let throttle;
     guessMap.on('mousemove', e => {
       clearTimeout(throttle);
-      throttle = setTimeout(()=>{
+      throttle = setTimeout(() => {
         fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${e.latlng.lat}&longitude=${e.latlng.lng}&localityLanguage=en`)
-          .then(r=>r.json()).then(d=>{
-            if(d.postcode){
-              const digs=d.postcode.toString().padStart(4,'0').slice(0,4);
-              document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input')
-                .forEach((el,i)=>el.value=digs[i]||'');
+          .then(r => r.json()).then(d => {
+            if (d.postcode) {
+              const digs = d.postcode.toString().padStart(4,'0').slice(0,4);
+              document.querySelectorAll('.div4 input, .div5 input, .div6 input, .div7 input')
+                .forEach((el,i) => el.value = digs[i] || '');
             }
           });
-      },50);
+      }, 50);
     });
   </script>
 </body>
