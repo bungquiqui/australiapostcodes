@@ -128,10 +128,10 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
-    // ---- 1) Corrected locations from your Google links ----
+    // ---- Corrected locations ----
     const locations = [
       { lat: -29.1140928, lon: 147.4544738, postcode: '2838' },  // 8 Brenda St, Goodooga NSW 2838
-      { lat: -29.4271992, lon: 147.9803003, postcode: '2834' },  // 46 Morilla St, Lightning Ridge NSW 2834
+      { lat: -29.4274189, lon: 147.9804288, postcode: '2834' },  // 46 Morilla St, Lightning Ridge NSW 2834
       { lat: -30.9546979, lon: 121.1655660, postcode: '6429' },  // 56 Bayley St, Coolgardie WA 6429
       { lat: -33.9635644, lon: 137.7150844, postcode: '5554' },  // 56 Graves St, Kadina SA 5554
       { lat: -36.2510410, lon: 142.3949934, postcode: '3393' },  // 107 Scott St, Warracknabeal VIC 3393
@@ -142,17 +142,16 @@
     let current = locations[currentIndex];
     let panorama;
 
-    // ---- 2) Called by Maps API when ready ----
+    // ---- Called by Maps API when ready ----
     function initMap() {
       const svc = new google.maps.StreetViewService();
-      // prefetch each panorama
       locations.forEach(loc => {
         svc.getPanorama({ location:{lat:loc.lat,lng:loc.lon}, radius:50 }, () => {});
       });
       initStreetView();
     }
 
-    // show the first Street View
+    // ---- Show Street View ----
     function initStreetView() {
       panorama = new google.maps.StreetViewPanorama(
         document.getElementById('streetView'),
@@ -160,7 +159,7 @@
       );
     }
 
-    // ---- Leaflet guess map ----
+    // ---- Leaflet map ----
     const defaultCenter = [-25.2744,133.7751];
     const defaultZoom = 4;
     const guessMap = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
@@ -168,9 +167,9 @@
 
     let guessMarker, correctMarker, line;
     function showVisualResult(uLat,uLon,cLat,cLon) {
-      if(guessMarker) guessMap.removeLayer(guessMarker);
-      if(correctMarker) guessMap.removeLayer(correctMarker);
-      if(line) guessMap.removeLayer(line);
+      if (guessMarker) guessMap.removeLayer(guessMarker);
+      if (correctMarker) guessMap.removeLayer(correctMarker);
+      if (line) guessMap.removeLayer(line);
       guessMarker = L.marker([uLat,uLon]).addTo(guessMap);
       correctMarker = L.marker([cLat,cLon]).addTo(guessMap);
       line = L.polyline([[uLat,uLon],[cLat,cLon]],{color:'#dc1928'}).addTo(guessMap);
@@ -191,8 +190,8 @@
       const guess = Array.from(inputs).map(i=>i.value).join('');
       const pop = document.getElementById('popup');
       const center = guessMap.getCenter();
-      const dist = Math.round(getDistance(center.lat, center.lng, current.lat, current.lon));
-      const ok = guess === current.postcode;
+      const dist = Math.round(getDistance(center.lat,center.lng,current.lat,current.lon));
+      const ok = (guess === current.postcode);
 
       pop.innerText = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
       pop.style.display = 'block';
@@ -201,12 +200,12 @@
       setTimeout(()=>{
         pop.style.display='none';
         [guessMarker,correctMarker,line].forEach(m=>m&&guessMap.removeLayer(m));
-        guessMap.setView(defaultCenter,defaultZoom);
+        guessMap.setView(defaultCenter, defaultZoom);
         currentIndex=(currentIndex+1)%locations.length;
         current=locations[currentIndex];
-        panorama.setPosition({lat:current.lat,lng:current.lon});
+        panorama.setPosition({lat:current.lat, lng:current.lon});
         inputs.forEach(i=>i.value='');
-      },2000);
+      }, 2000);
     }
 
     // ---- Optional: autofill on hover ----
