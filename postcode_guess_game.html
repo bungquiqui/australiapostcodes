@@ -188,7 +188,7 @@
     const guessMap=L.map('guessMapFull').setView(defaultCenter,defaultZoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
     let guessMarker,correctMarker,line;
-    const GOOGLE_API_KEY = '';
+    const GOOGLE_API_KEY = 'AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs';
     function streetViewUrl(lat, lon) {
       return `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lon}&key=${GOOGLE_API_KEY}`;
     }
