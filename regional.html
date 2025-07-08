@@ -6,10 +6,7 @@
   <title>Australia Postcodes – Regional Edition</title>
 
   <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
     html, body { margin:0; padding:0; height:100%; font-family:sans-serif; background:#f5f5f5; }
@@ -22,81 +19,117 @@
       padding:30px;
       box-sizing:border-box;
     }
-    .div3 { grid-area:2/1/9/9; background:white; overflow:hidden; }
+    .div1 { grid-area:1/1/2/2; background:#dc1928; display:flex; align-items:center; justify-content:center; aspect-ratio:1; border-radius:12px; }
+    .div1 img { width:clamp(100px,10vw,160px); }
+    .div2 { grid-area:1/2/2/13; background:#dc1928; color:white; font-size:clamp(32px,4vw,64px); font-weight:500; display:flex; align-items:center; padding:24px; border-radius:12px; }
+    .div3 { grid-area:2/1/9/9; background:white; overflow:hidden; border-radius:12px; position:relative; }
     #streetView { width:100%; height:100%; }
-    .popup { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    .popup {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       background:white; padding:20px 30px; box-shadow:0 4px 20px rgba(0,0,0,0.2);
       border-radius:12px; font-size:20px; text-align:center; z-index:1000; display:none;
     }
-    .div10 { grid-area:2/9/6/13; background:white; overflow:visible; }
-    #guessMapFull { width:100%; height:100%; position:relative; }
-    .crosshair { position:absolute; top:50%; left:50%; width:24px; height:24px;
-      margin:-12px 0 0 -12px; pointer-events:none; z-index:1000;
+    .div10 { grid-area:2/9/6/13; background:white; overflow:visible; border-radius:12px; position:relative; }
+    #guessMapFull { width:100%; height:100%; }
+    .crosshair {
+      position:absolute; top:50%; left:50%; width:24px; height:24px; margin:-12px 0 0 -12px;
+      pointer-events:none; z-index:1000;
     }
     .crosshair::before, .crosshair::after { content:''; position:absolute; background:#dc1928; }
     .crosshair::before { width:2px; height:100%; left:50%; transform:translateX(-50%); }
     .crosshair::after  { height:2px; width:100%; top:50%; transform:translateY(-50%); }
-    /* [include any additional .div1/.div2/.div8/.div9/.div4–.div7 styling as before] */
+    .div8 { grid-area:6/9/7/12; background:white; display:flex; align-items:center; padding:24px; font-size:clamp(24px,3vw,48px); font-weight:bold; border-radius:12px; }
+    .div9 { grid-area:6/12/7/13; background:#dc1928; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:12px; }
+    .div9 svg { width:64px; height:64px; fill:white; }
+    .div4 { grid-area:7/9/9/10; }
+    .div5 { grid-area:7/10/9/11; }
+    .div6 { grid-area:7/11/9/12; }
+    .div7 { grid-area:7/12/9/13; }
+    .div4 input, .div5 input, .div6 input, .div7 input {
+      width:100%; height:100%; font-size:clamp(64px,8vw,96px);
+      text-align:center; border:none; border-radius:12px; background:#fff; color:#212129;
+    }
+    .div4 input:focus, .div5 input:focus, .div6 input:focus, .div7 input:focus {
+      outline:none; border:2px solid #dc1928;
+    }
   </style>
 
-  <!-- Leaflet JS (loaded early so L is ready) -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-</head>
-<body>
-  <div class="parent">
-    <!-- your grid markup: logo, title, Street View pane, popup -->
-    <div class="div3">
-      <div id="streetView"></div>
-      <div class="popup" id="popup"></div>
-    </div>
-
-    <!-- guess-map with crosshair -->
-    <div class="div10">
-      <div id="guessMapFull"></div>
-      <div class="crosshair"></div>
-    </div>
-
-    <!-- your POSTCODE inputs and submit button markup -->
-  </div>
 
   <script>
-    // Globals
     let locations = [], currentIndex = 0, panorama, svc, guessMap;
-    const defaultCenter = [-25.2744,133.7751], defaultZoom = 4;
+    const defaultCenter = [-25.2744, 133.7751], defaultZoom = 4;
 
-    // Called by Maps API after load
-    window.initRegionalGame = function() {
-      svc = new google.maps.StreetViewService();
+    // helper: distance in metres between two lat/lng
+    function getDistanceMetres(aLat,aLon,bLat,bLon) {
+      const R = 6371000;
+      const φ1 = aLat * Math.PI/180, φ2 = bLat * Math.PI/180;
+      const Δφ = (bLat - aLat) * Math.PI/180, Δλ = (bLon - aLon) * Math.PI/180;
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
 
-      // 1) Fetch the pre-filtered JSON
-      fetch('locations_regional_with_streetview.json')
-        .then(r => r.json())
-        .then(data => {
-          locations = data.sort(() => Math.random() - 0.5);
+    function showVisualResult(uLat,uLon,cLat,cLon) {
+      // clear old overlays
+      guessMap.eachLayer(layer => {
+        if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+          guessMap.removeLayer(layer);
+        }
+      });
+      L.marker([uLat,uLon]).addTo(guessMap);
+      L.marker([cLat,cLon]).addTo(guessMap);
+      L.polyline([[uLat,uLon],[cLat,cLon]],{color:'#dc1928'}).addTo(guessMap);
+      guessMap.fitBounds([[uLat,uLon],[cLat,cLon]]);
+    }
 
-          // 2) Now that #guessMapFull exists, init Leaflet
-          guessMap = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-            .addTo(guessMap);
+    function getDistance(a,b,c,d) {
+      const R=6371, dLat=(c-a)*Math.PI/180, dLon=(d-b)*Math.PI/180;
+      const a2 = Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
+    }
 
-          // 3) Kick off the first panorama
-          showStreetView();
-        });
-    };
+    function submitGuess() {
+      const inputs = document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input');
+      const guess = Array.from(inputs).map(i=>i.value).join('');
+      const pop = document.getElementById('popup');
+      const center = guessMap.getCenter();
+      const dist = Math.round(getDistance(center.lat, center.lng, locations[currentIndex].lat, locations[currentIndex].lon));
+      const ok = guess === locations[currentIndex].postcode;
+      pop.innerText = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
+      pop.style.display = 'block';
+      showVisualResult(center.lat, center.lng, locations[currentIndex].lat, locations[currentIndex].lon);
+      setTimeout(()=>{
+        pop.style.display = 'none';
+        guessMap.setView(defaultCenter, defaultZoom);
+        currentIndex = (currentIndex + 1) % locations.length;
+        showStreetView();
+        inputs.forEach(i=>i.value='');
+      },2000);
+    }
 
     function showStreetView() {
       const spot = locations[currentIndex];
       svc.getPanorama(
-        { location: { lat: spot.lat, lng: spot.lon }, radius: 100 },
+        { location: { lat: spot.lat, lng: spot.lon }, radius: 10 },
         (data, status) => {
           if (status === google.maps.StreetViewStatus.OK) {
-            const panoId = data.location.pano;
+            const panoLat = data.location.latLng.lat();
+            const panoLng = data.location.latLng.lng();
+            const dist = getDistanceMetres(spot.lat, spot.lon, panoLat, panoLng);
+            if (dist > 15) {
+              currentIndex = (currentIndex + 1) % locations.length;
+              return showStreetView();
+            }
+            const heading = Number(spot.heading) || 0;
+            const pitch   = Number(spot.pitch)   || 0;
             if (!panorama) {
               panorama = new google.maps.StreetViewPanorama(
                 document.getElementById('streetView'),
                 {
-                  pano: panoId,
-                  pov: { heading: spot.heading, pitch: spot.pitch },
+                  pano: data.location.pano,
+                  pov: { heading, pitch },
                   zoom: 1,
                   motionTracking: false,
                   clickToGo: false,
@@ -104,11 +137,10 @@
                 }
               );
             } else {
-              panorama.setPano(panoId);
-              panorama.setPov({ heading: spot.heading, pitch: spot.pitch });
+              panorama.setPano(data.location.pano);
+              panorama.setPov({ heading, pitch });
             }
           } else {
-            console.warn('No pano for', spot);
             currentIndex = (currentIndex + 1) % locations.length;
             showStreetView();
           }
@@ -116,21 +148,53 @@
       );
     }
 
-    function showVisualResult(uLat,uLon,cLat,cLon) {
-      // your existing guessMap marker/polyline logic
-    }
-    function getDistance(a,b,c,d) {
-      // your haversine
-    }
-    function submitGuess() {
-      // your guess handling (popup, polyline, cycle)
-    }
+    window.initRegionalGame = function() {
+      svc = new google.maps.StreetViewService();
+      fetch('locations_regional_with_streetview.json')
+        .then(r => r.json())
+        .then(data => {
+          locations = data.sort(() => Math.random() - 0.5);
+          // initialize Leaflet map now that DOM is ready
+          guessMap = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
+          showStreetView();
+        });
+    };
   </script>
 
-  <!-- Google Maps JS API with our callback -->
+  <!-- Google Maps JS API -->
   <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs
-         &callback=initRegionalGame&loading=async">
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs&callback=initRegionalGame&loading=async">
   </script>
+</head>
+
+<body>
+  <div class="parent">
+    <div class="div1">
+      <img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo" />
+    </div>
+    <div class="div2">Australia Postcodes</div>
+
+    <div class="div3">
+      <div id="streetView"></div>
+      <div id="popup" class="popup"></div>
+    </div>
+
+    <div class="div10">
+      <div id="guessMapFull"></div>
+      <div class="crosshair"></div>
+    </div>
+
+    <div class="div8">POSTCODE</div>
+    <div class="div9" onclick="submitGuess()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M10 17l5-5-5-5v10z"/>
+      </svg>
+    </div>
+    <div class="div4"><input maxlength="1" /></div>
+    <div class="div5"><input maxlength="1" /></div>
+    <div class="div6"><input maxlength="1" /></div>
+    <div class="div7"><input maxlength="1" /></div>
+  </div>
 </body>
 </html>
