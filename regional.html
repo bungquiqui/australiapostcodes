@@ -40,31 +40,30 @@
     }
   </style>
 
-  <!-- Define callback before loading Maps API -->
+  <!-- Define our callback BEFORE loading the API -->
   <script>
-    // globals
-    let locations = [], currentIndex = 0, panorama, svc, guessMap;
-    let guessMarker, correctMarker, polyline;
+    // Globals
+    let locations, currentIndex, svc, panorama, guessMap, guessMarker, correctMarker, polyline;
     const defaultCenter = {lat:-25.2744,lng:133.7751}, defaultZoom = 4;
 
     function getDistanceMetres(aLat,aLon,bLat,bLon) {
       const R=6371000, φ1=aLat*Math.PI/180, φ2=bLat*Math.PI/180;
       const dφ=(bLat-aLat)*Math.PI/180, dλ=(bLon-aLon)*Math.PI/180;
-      const a=Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+      const a = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
     function getDistance(a,b,c,d) {
       const R=6371, dLat=(c-a)*Math.PI/180, dLon=(d-b)*Math.PI/180;
-      const a2=Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
+      const a2 = Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1-a2));
     }
 
     function showVisualResult(uLat,uLon,cLat,cLon) {
       if (guessMarker)  guessMarker.setMap(null);
       if (correctMarker) correctMarker.setMap(null);
       if (polyline)     polyline.setMap(null);
-      guessMarker = new google.maps.Marker({position:{lat:uLat,lng:uLon},map:guessMap});
-      correctMarker = new google.maps.Marker({position:{lat:cLat,lng:cLon},map:guessMap});
+      guessMarker = new google.maps.Marker({ position:{lat:uLat,lng:uLon}, map:guessMap });
+      correctMarker = new google.maps.Marker({ position:{lat:cLat,lng:cLon}, map:guessMap });
       polyline = new google.maps.Polyline({
         path:[{lat:uLat,lng:uLon},{lat:cLat,lng:cLon}],
         strokeColor:'#dc1928', strokeWeight:2, map:guessMap
@@ -82,15 +81,17 @@
       const pop   = document.getElementById('popup');
       const center= guessMap.getCenter();
       const dist  = Math.round(getDistance(center.lat(),center.lng(),spot.lat,spot.lon));
-      const ok    = (guess===spot.postcode);
-      pop.innerText   = ok ? 'Correct! ' + dist + ' km' : 'Wrong! ' + dist + ' km';
+      const ok    = (guess === spot.postcode);
+      pop.innerText   = ok
+        ? 'Correct! ' + dist + ' km'
+        : 'Wrong!   ' + dist + ' km';
       pop.style.display = 'block';
       showVisualResult(center.lat(), center.lng(), spot.lat, spot.lon);
       setTimeout(()=>{
         pop.style.display='none';
         guessMap.setCenter(defaultCenter);
         guessMap.setZoom(defaultZoom);
-        currentIndex=(currentIndex+1)%locations.length;
+        currentIndex = (currentIndex + 1) % locations.length;
         showStreetView();
         inputs.forEach(i=>i.value='');
       },2000);
@@ -99,36 +100,36 @@
     function showStreetView() {
       const spot = locations[currentIndex];
       svc.getPanorama(
-        {location:{lat:spot.lat,lng:spot.lon},radius:10},
+        { location:{lat:spot.lat,lng:spot.lon}, radius:10 },
         (data,status) => {
-          if(status===google.maps.StreetViewStatus.OK) {
+          if (status === google.maps.StreetViewStatus.OK) {
             const panoLat = data.location.latLng.lat(),
                   panoLng = data.location.latLng.lng(),
                   offset  = getDistanceMetres(spot.lat,spot.lon,panoLat,panoLng);
-            if(offset>15) {
-              currentIndex=(currentIndex+1)%locations.length;
+            if (offset > 15) {
+              currentIndex = (currentIndex + 1) % locations.length;
               return showStreetView();
             }
-            const heading = typeof spot.heading==='number'?spot.heading:0;
-            const pitch   = typeof spot.pitch==='number'?spot.pitch:0;
-            if(!panorama) {
+            const heading = typeof spot.heading === 'number' ? spot.heading : 0;
+            const pitch   = typeof spot.pitch   === 'number' ? spot.pitch   : 0;
+            if (!panorama) {
               panorama = new google.maps.StreetViewPanorama(
                 document.getElementById('streetView'),
                 {
                   pano: data.location.pano,
-                  pov:  {heading,pitch},
-                  zoom:1,
-                  motionTracking:false,
-                  clickToGo:false,
-                  disableDefaultUI:true
+                  pov:  { heading, pitch },
+                  zoom: 1,
+                  motionTracking: false,
+                  clickToGo: false,
+                  disableDefaultUI: true
                 }
               );
             } else {
               panorama.setPano(data.location.pano);
-              panorama.setPov({heading,pitch});
+              panorama.setPov({ heading, pitch });
             }
           } else {
-            currentIndex=(currentIndex+1)%locations.length;
+            currentIndex = (currentIndex + 1) % locations.length;
             showStreetView();
           }
         }
@@ -136,55 +137,95 @@
     }
 
     window.initRegionalGame = function() {
-      svc = new google.maps.StreetViewService();
-      fetch('locations_regional_with_streetview.json')
-        .then(r=>r.json())
-        .then(data=>{
-          locations = data.sort(()=>Math.random()-0.5);
-          guessMap = new google.maps.Map(
-            document.getElementById('guessMapFull'),
-            {center:defaultCenter,zoom:defaultZoom,disableDefaultUI:true}
-          );
-          guessMap.addListener('idle', ()=> {
-            const c=guessMap.getCenter();
-            fetch(
-              'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' +
-              c.lat() + '&longitude=' + c.lng() +
-              '&localityLanguage=en'
-            )
-            .then(r=>r.json()).then(d=> {
-              if(d.postcode) {
-                const digs=d.postcode.toString().padStart(4,'0').slice(0,4);
-                document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input')
-                  .forEach((el,i)=>el.value=digs[i]||'');
-              }
+      function start() {
+        svc = new google.maps.StreetViewService();
+        fetch('locations_regional_with_streetview.json')
+          .then(r => r.json())
+          .then(data => {
+            locations = data.sort(() => Math.random() - 0.5);
+            // init guess map
+            guessMap = new google.maps.Map(
+              document.getElementById('guessMapFull'),
+              { center: defaultCenter, zoom: defaultZoom, disableDefaultUI: true }
+            );
+            // postcode autofill on idle
+            guessMap.addListener('idle', function() {
+              const c = guessMap.getCenter();
+              fetch(
+                'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' +
+                c.lat() + '&longitude=' + c.lng() +
+                '&localityLanguage=en'
+              )
+              .then(r => r.json())
+              .then(d => {
+                if (d.postcode) {
+                  const digs = d.postcode.toString().padStart(4,'0').slice(0,4);
+                  document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input')
+                    .forEach((el,i)=>el.value=digs[i]||'');
+                }
+              });
             });
+            // auto-tab
+            const codeInputs = Array.from(document.querySelectorAll(
+              '.div4 input,.div5 input,.div6 input,.div7 input'
+            ));
+            codeInputs.forEach((input, idx) => {
+              input.addEventListener('input', function(e){
+                e.target.value = e.target.value.slice(0,1);
+                if (e.target.value !== '' && idx < codeInputs.length - 1) {
+                  codeInputs[idx + 1].focus();
+                }
+              });
+              input.addEventListener('keydown', function(e){
+                if (e.key === 'Backspace' && e.target.value === '' && idx > 0) {
+                  codeInputs[idx - 1].focus();
+                }
+              });
+            });
+            showStreetView();
           });
-          // auto-tab inputs
-          const codeInputs = document.querySelectorAll(
-            '.div4 input,.div5 input,.div6 input,.div7 input'
-          );
-          codeInputs.forEach((input,idx)=> {
-            input.addEventListener('input',e=>{
-              e.target.value = e.target.value.slice(0,1);
-              if(e.target.value!=='' && idx<codeInputs.length-1) {
-                codeInputs[idx+1].focus();
-              }
-            });
-            input.addEventListener('keydown',e=>{
-              if(e.key==='Backspace' && e.target.value==='' && idx>0) {
-                codeInputs[idx-1].focus();
-              }
-            });
-          });
-          showStreetView();
-        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+      } else {
+        start();
+      }
     };
   </script>
 
-  <!-- Load Google Maps JS API -->
-  <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs&callback=initRegionalGame&loading=async">
+  <!-- Load Google Maps JS API (defer only) -->
+  <script defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs&callback=initRegionalGame">
   </script>
+</head>
+
+<body>
+  <div class="parent">
+    <div class="div1">
+      <img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo">
+    </div>
+    <div class="div2">Australia Postcodes</div>
+
+    <div class="div3">
+      <div id="streetView"></div>
+      <div id="popup" class="popup"></div>
+    </div>
+
+    <div class="div10">
+      <div id="guessMapFull"></div>
+      <div class="crosshair"></div>
+    </div>
+
+    <div class="div8">POSTCODE</div>
+    <div class="div9" onclick="submitGuess()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M10 17l5-5-5-5v10z"/>
+      </svg>
+    </div>
+    <div class="div4"><input maxlength="1"></div>
+    <div class="div5"><input maxlength="1"></div>
+    <div class="div6"><input maxlength="1"></div>
+    <div class="div7"><input maxlength="1"></div>
+  </div>
 </body>
 </html>
