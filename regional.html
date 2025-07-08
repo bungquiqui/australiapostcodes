@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Australia Postcodes – Regional Edition</title>
 
-  <!-- Styles -->
   <style>
     html, body { margin:0; padding:0; height:100%; font-family:sans-serif; background:#f5f5f5; }
     .parent {
@@ -22,10 +21,17 @@
     .div2 { grid-area:1/2/2/13; background:#dc1928; color:white; font-size:clamp(32px,4vw,64px); font-weight:500; display:flex; align-items:center; padding:24px; border-radius:12px; }
     .div3 { grid-area:2/1/9/9; background:white; overflow:hidden; border-radius:12px; position:relative; }
     #streetView { width:100%; height:100%; }
-    .popup { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:20px 30px; box-shadow:0 4px 20px rgba(0,0,0,0.2); border-radius:12px; font-size:20px; text-align:center; z-index:1000; display:none; }
+    .popup {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:white; padding:20px 30px; box-shadow:0 4px 20px rgba(0,0,0,0.2);
+      border-radius:12px; font-size:20px; text-align:center; z-index:1000; display:none;
+    }
     .div10 { grid-area:2/9/6/13; background:white; overflow:visible; border-radius:12px; position:relative; }
     #guessMapFull { width:100%; height:100%; }
-    .crosshair { position:absolute; top:50%; left:50%; width:24px; height:24px; margin:-12px 0 0 -12px; pointer-events:none; z-index:1000; }
+    .crosshair {
+      position:absolute; top:50%; left:50%; width:24px; height:24px;
+      margin:-12px 0 0 -12px; pointer-events:none; z-index:1000;
+    }
     .crosshair::before, .crosshair::after { content:''; position:absolute; background:#dc1928; }
     .crosshair::before { width:2px; height:100%; left:50%; transform:translateX(-50%); }
     .crosshair::after  { height:2px; width:100%; top:50%; transform:translateY(-50%); }
@@ -34,14 +40,15 @@
     .div9 svg { width:64px; height:64px; fill:white; }
     .div4 { grid-area:7/9/9/10; } .div5 { grid-area:7/10/9/11; } .div6 { grid-area:7/11/9/12; } .div7 { grid-area:7/12/9/13; }
     .div4 input, .div5 input, .div6 input, .div7 input {
-      width:100%; height:100%; font-size:clamp(64px,8vw,96px); text-align:center; border:none; border-radius:12px; background:#fff; color:#212129;
+      width:100%; height:100%; font-size:clamp(64px,8vw,96px);
+      text-align:center; border:none; border-radius:12px; background:#fff; color:#212129;
     }
     .div4 input:focus, .div5 input:focus, .div6 input:focus, .div7 input:focus {
       outline:none; border:2px solid #dc1928;
     }
   </style>
 
-  <!-- Google Maps JS API with callback -->
+  <!-- Google Maps JS API -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs&callback=initRegionalGame&loading=async">
   </script>
@@ -49,12 +56,14 @@
 
 <body>
   <div class="parent">
-    <div class="div1"><img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo"></div>
+    <div class="div1">
+      <img src="images/AP_Logo_Symbol_White copy.svg" alt="Logo">
+    </div>
     <div class="div2">Australia Postcodes</div>
 
     <div class="div3">
       <div id="streetView"></div>
-      <div id="popup" class="popup"></div>
+      <div class="popup" id="popup"></div>
     </div>
 
     <div class="div10">
@@ -75,16 +84,14 @@
   </div>
 
   <script>
-    // globals
     let locations = [], currentIndex = 0, panorama, svc, guessMap;
-    let guessMarker, correctMarker, polyline, hoverThrottle;
-    const defaultCenter = { lat:-25.2744, lng:133.7751 }, defaultZoom = 4;
+    let guessMarker, correctMarker, polyline;
+    const defaultCenter = {lat:-25.2744,lng:133.7751}, defaultZoom = 4;
 
-    // distance helpers
     function getDistanceMetres(aLat,aLon,bLat,bLon) {
       const R=6371000, φ1=aLat*Math.PI/180, φ2=bLat*Math.PI/180;
       const Δφ=(bLat-aLat)*Math.PI/180, Δλ=(bLon-aLon)*Math.PI/180;
-      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      const a=Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
       return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
     function getDistance(a,b,c,d) {
@@ -93,15 +100,14 @@
       return R*2*Math.atan2(Math.sqrt(a2),Math.sqrt(1-a2));
     }
 
-    // show markers & line on Google Map
     function showVisualResult(uLat,uLon,cLat,cLon) {
-      if(guessMarker) guessMarker.setMap(null);
+      if(guessMarker)  guessMarker.setMap(null);
       if(correctMarker) correctMarker.setMap(null);
-      if(polyline) polyline.setMap(null);
-      guessMarker   = new google.maps.Marker({ position:{lat:uLat,lng:uLon},   map:guessMap });
-      correctMarker = new google.maps.Marker({ position:{lat:cLat,lng:cLon},   map:guessMap });
+      if(polyline)     polyline.setMap(null);
+      guessMarker   = new google.maps.Marker({ position:{lat:uLat,lng:uLon}, map:guessMap });
+      correctMarker = new google.maps.Marker({ position:{lat:cLat,lng:cLon}, map:guessMap });
       polyline = new google.maps.Polyline({
-        path: [ {lat:uLat,lng:uLon}, {lat:cLat,lng:cLon} ],
+        path:[{lat:uLat,lng:uLon},{lat:cLat,lng:cLon}],
         strokeColor:'#dc1928', strokeWeight:2, map:guessMap
       });
       const bounds = new google.maps.LatLngBounds();
@@ -110,16 +116,15 @@
       guessMap.fitBounds(bounds);
     }
 
-    // handle guess submission
     function submitGuess() {
       const inputs = document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input');
-      const guess  = Array.from(inputs).map(i=>i.value).join('');
-      const spot   = locations[currentIndex];
-      const pop    = document.getElementById('popup');
-      const center = guessMap.getCenter();
-      const dist   = Math.round(getDistance(center.lat(), center.lng(), spot.lat, spot.lon));
-      const ok     = guess === spot.postcode;
-      pop.innerText   = ok ? `Correct! ${dist} km` : `Wrong!   ${dist} km`;
+      const guess = Array.from(inputs).map(i=>i.value).join('');
+      const spot  = locations[currentIndex];
+      const pop   = document.getElementById('popup');
+      const center= guessMap.getCenter();
+      const dist  = Math.round(getDistance(center.lat(),center.lng(),spot.lat,spot.lon));
+      const ok    = guess === spot.postcode;
+      pop.innerText = ok ? \`Correct! \${dist} km\` : \`Wrong!   \${dist} km\`;
       pop.style.display = 'block';
       showVisualResult(center.lat(), center.lng(), spot.lat, spot.lon);
       setTimeout(()=>{
@@ -132,7 +137,6 @@
       },2000);
     }
 
-    // show Street View at exact office
     function showStreetView() {
       const spot = locations[currentIndex];
       svc.getPanorama(
@@ -153,8 +157,8 @@
                 document.getElementById('streetView'),
                 {
                   pano: data.location.pano,
-                  pov: { heading, pitch },
-                  zoom:1,
+                  pov:  { heading, pitch },
+                  zoom: 1,
                   motionTracking:false,
                   clickToGo:false,
                   disableDefaultUI:true
@@ -172,33 +176,51 @@
       );
     }
 
-    // initialize everything
     window.initRegionalGame = function() {
       svc = new google.maps.StreetViewService();
       fetch('locations_regional_with_streetview.json')
         .then(r=>r.json())
         .then(data=>{
           locations = data.sort(()=>Math.random()-0.5);
-          // init Google guess map
-          guessMap = new google.maps.Map(document.getElementById('guessMapFull'), {
-            center: defaultCenter,
-            zoom: defaultZoom,
-            disableDefaultUI: true
+
+          // init guess map
+          guessMap = new google.maps.Map(
+            document.getElementById('guessMapFull'),
+            { center: defaultCenter, zoom: defaultZoom, disableDefaultUI: true }
+          );
+
+          // postcode autofill on idle (after pan/zoom)
+          google.maps.event.addListener(guessMap, 'idle', () => {
+            const c = guessMap.getCenter();
+            fetch(\`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=\${c.lat()}&longitude=\${c.lng()}&localityLanguage=en\`)
+              .then(r=>r.json())
+              .then(d => {
+                if(d.postcode) {
+                  const digs = d.postcode.toString().padStart(4,'0').slice(0,4);
+                  document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input')
+                    .forEach((el,i)=>el.value=digs[i]||'');
+                }
+              });
           });
-          // postcode autofill on hover
-          google.maps.event.addListener(guessMap,'mousemove', e=>{
-            clearTimeout(hoverThrottle);
-            hoverThrottle = setTimeout(()=>{
-              fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${e.latLng.lat()}&longitude=${e.latLng.lng()}&localityLanguage=en`)
-                .then(r=>r.json()).then(d=>{
-                  if(d.postcode) {
-                    const digs = d.postcode.toString().padStart(4,'0').slice(0,4);
-                    document.querySelectorAll('.div4 input,.div5 input,.div6 input,.div7 input')
-                      .forEach((el,i)=>el.value=digs[i]||'');
-                  }
-                });
-            },50);
+
+          // auto-tab postcode inputs
+          const codeInputs = Array.from(document.querySelectorAll(
+            '.div4 input,.div5 input,.div6 input,.div7 input'
+          ));
+          codeInputs.forEach((input, idx) => {
+            input.addEventListener('input', e => {
+              e.target.value = e.target.value.slice(0,1);
+              if(e.target.value && idx < codeInputs.length-1) {
+                codeInputs[idx+1].focus();
+              }
+            });
+            input.addEventListener('keydown', e => {
+              if(e.key==='Backspace' && !e.target.value && idx>0) {
+                codeInputs[idx-1].focus();
+              }
+            });
           });
+
           showStreetView();
         });
     };
