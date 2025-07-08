@@ -4,47 +4,84 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Australia Postcodes – Regional Edition</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <!-- 1) Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+
+  <!-- 2) Leaflet JS (must load before any code that uses L) -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <style>
-    /* [copy your same grid & styling rules here] */
+    html, body { margin:0; padding:0; height:100%; font-family:sans-serif; background:#f5f5f5; }
+    .parent {
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      grid-template-rows:repeat(8,1fr);
+      gap:30px;
+      height:100vh;
+      padding:30px;
+      box-sizing:border-box;
+    }
+    /* [your other grid & styling rules here…] */
+    .div10 { grid-area:2/9/6/13; background:white; overflow:visible; }
+    #guessMapFull { width:100%; height:100%; position:relative; z-index:0; }
+    .crosshair {
+      position:absolute; top:50%; left:50%;
+      width:24px; height:24px; margin:-12px 0 0 -12px;
+      pointer-events:none; z-index:1000;
+    }
+    .crosshair::before,
+    .crosshair::after {
+      content:''; position:absolute; background:#dc1928;
+    }
+    .crosshair::before { width:2px; height:100%; left:50%; transform:translateX(-50%); }
+    .crosshair::after  { height:2px; width:100%; top:50%; transform:translateY(-50%); }
   </style>
 
-  <!-- define our loader as the Maps callback -->
+  <!-- 3) Inline setup: define initRegionalGame and all map logic -->
   <script>
-    let locations = [], currentIndex = 0, current, panorama, svc;
-    // Leaflet map setup
+    let locations = [], currentIndex = 0, panorama, svc;
+
+    // 4) Set up the Leaflet guess-map (L is now defined)
     const defaultCenter = [-25.2744,133.7751],
           defaultZoom   = 4,
-          guessMap      = L.map('guessMapFull').setView(defaultCenter,defaultZoom);
+          guessMap      = L.map('guessMapFull').setView(defaultCenter, defaultZoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
 
-    function showVisualResult(uLat,uLon,cLat,cLon) { /*…*/ }
-    function getDistance(a,b,c,d) { /*…*/ }
-    function submitGuess() { /*…*/ }
+    function showVisualResult(uLat,uLon,cLat,cLon) {
+      // … your existing code …
+    }
+    function getDistance(a,b,c,d) { /* … */ }
+    function submitGuess()     { /* … */ }
 
     function showStreetView() {
-      const spot = (current = locations[currentIndex]);
-      svc.getPanorama({ location:{lat:spot.lat,lng:spot.lon}, radius:50 },
+      const spot = locations[currentIndex];
+      svc.getPanorama(
+        { location:{lat:spot.lat,lng:spot.lon}, radius:100 },
         (data,status) => {
-          if(status===google.maps.StreetViewStatus.OK) {
-            if(!panorama) {
+          if (status===google.maps.StreetViewStatus.OK) {
+            const panoId = data.location.pano;
+            if (!panorama) {
               panorama = new google.maps.StreetViewPanorama(
                 document.getElementById('streetView'),
                 {
-                  pano:  data.location.pano,
-                  pov:   { heading: spot.heading, pitch: spot.pitch },
-                  zoom:  1,
+                  pano: panoId,
+                  pov:  { heading: spot.heading, pitch: spot.pitch },
+                  zoom: 1,
                   motionTracking:   false,
                   clickToGo:        false,
                   disableDefaultUI: true
                 }
               );
             } else {
-              panorama.setPano(data.location.pano);
+              panorama.setPano(panoId);
               panorama.setPov({ heading: spot.heading, pitch: spot.pitch });
             }
           } else {
-            console.warn('Skipping unviewable:', spot);
+            console.warn('No pano for', spot);
             currentIndex = (currentIndex+1)%locations.length;
             showStreetView();
           }
@@ -52,10 +89,9 @@
       );
     }
 
-    // This is our Maps callback
+    // 5) Define the Maps callback *before* loading the API
     window.initRegionalGame = function() {
       svc = new google.maps.StreetViewService();
-      // fetch the pre-filtered JSON
       fetch('locations_regional_with_streetview.json')
         .then(r => r.json())
         .then(data => {
@@ -65,7 +101,7 @@
     };
   </script>
 
-  <!-- load the Maps API and call our loader -->
+  <!-- 6) Finally, load the Maps API and point to our callback -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs
          &callback=initRegionalGame&loading=async">
@@ -73,9 +109,13 @@
 </head>
 <body>
   <div class="parent">
-    <!-- [copy your same grid markup: logo, title, streetView div, popup, guessMapFull with crosshair, inputs, etc.] -->
+    <!-- copy your grid HTML here: logo, title, 
+         <div id="streetView"></div>, popup, -->
+    <div class="div10">
+      <div id="guessMapFull"></div>
+      <div class="crosshair"></div>
+    </div>
+    <!-- inputs and submit button… -->
   </div>
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </body>
 </html>
