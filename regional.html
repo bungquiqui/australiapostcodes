@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Australia Postcodes – Regional Edition</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* [copy your same grid & styling rules here] */
+  </style>
+
+  <!-- define our loader as the Maps callback -->
+  <script>
+    let locations = [], currentIndex = 0, current, panorama, svc;
+    // Leaflet map setup
+    const defaultCenter = [-25.2744,133.7751],
+          defaultZoom   = 4,
+          guessMap      = L.map('guessMapFull').setView(defaultCenter,defaultZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(guessMap);
+
+    function showVisualResult(uLat,uLon,cLat,cLon) { /*…*/ }
+    function getDistance(a,b,c,d) { /*…*/ }
+    function submitGuess() { /*…*/ }
+
+    function showStreetView() {
+      const spot = (current = locations[currentIndex]);
+      svc.getPanorama({ location:{lat:spot.lat,lng:spot.lon}, radius:50 },
+        (data,status) => {
+          if(status===google.maps.StreetViewStatus.OK) {
+            if(!panorama) {
+              panorama = new google.maps.StreetViewPanorama(
+                document.getElementById('streetView'),
+                {
+                  pano:  data.location.pano,
+                  pov:   { heading: spot.heading, pitch: spot.pitch },
+                  zoom:  1,
+                  motionTracking:   false,
+                  clickToGo:        false,
+                  disableDefaultUI: true
+                }
+              );
+            } else {
+              panorama.setPano(data.location.pano);
+              panorama.setPov({ heading: spot.heading, pitch: spot.pitch });
+            }
+          } else {
+            console.warn('Skipping unviewable:', spot);
+            currentIndex = (currentIndex+1)%locations.length;
+            showStreetView();
+          }
+        }
+      );
+    }
+
+    // This is our Maps callback
+    window.initRegionalGame = function() {
+      svc = new google.maps.StreetViewService();
+      // fetch the pre-filtered JSON
+      fetch('locations_regional_with_streetview.json')
+        .then(r => r.json())
+        .then(data => {
+          locations = data.sort(() => Math.random() - 0.5);
+          showStreetView();
+        });
+    };
+  </script>
+
+  <!-- load the Maps API and call our loader -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCb1LBiQMB9U8KdZIIeLSgt6QN9B1Xs_cs
+         &callback=initRegionalGame&loading=async">
+  </script>
+</head>
+<body>
+  <div class="parent">
+    <!-- [copy your same grid markup: logo, title, streetView div, popup, guessMapFull with crosshair, inputs, etc.] -->
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</body>
+</html>
